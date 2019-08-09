@@ -1,0 +1,590 @@
+
+var width = 800,
+    height = 800,
+    innerRadius = 50,
+    outerRadius = 500,
+    majorAngle = Math.PI / 2,
+    minorAngle = 0;
+
+var lw = 300;
+var lh = 200;
+
+var angle = d3.scale.ordinal()
+    .domain(["parent", "child"])
+    .range([0, majorAngle - minorAngle]);
+
+var radius = d3.scale.linear()
+    .range([innerRadius, outerRadius]);
+
+var svgLegendFrom = d3.select("#hive-legend")
+    .append("svg")
+    .attr("height", lh + 20);
+
+var svgLegendTo = d3.select("#hive-legend")
+    .append("svg")
+    .attr("height", lh + 20);
+
+var svg = d3.select("#hive-chart").append("div")
+    .attr("id", "visualization")
+    .attr("height", height)
+    .attr("margin-left", "20px")
+    .append("svg")
+    .attr("width", width)
+    .attr("height", height)
+    .append("g")
+    .attr("transform", "translate(40, 490)");
+
+svgLegendFrom.append("rect")
+    .attr("class", "legend-box")
+    .attr("width", lw)
+    .attr("height", lh)
+    .attr("rx", 15)
+    .attr("ry", 15);
+
+svgLegendTo.append("rect")
+    .attr("class", "legend-box")
+    .attr("width", lw)
+    .attr("height", lh)
+    .attr("rx", 15)
+    .attr("ry", 15);
+
+var legendFromContainer = svgLegendFrom.append("g");
+var legendToContainer = svgLegendTo.append("g");
+var legendContainerMargin = 2;
+
+legendFromContainer.append("text")
+    .attr("id", "node-name-from")
+    .attr("class", "legend-text-header")
+    .attr("x", legendContainerMargin + 20)
+    .attr("y", legendContainerMargin + 50)
+    .text("");
+
+legendFromContainer.append("text")
+    .attr("id", "node-location-from")
+    .attr("class", "legend-text")
+    .attr("x", legendContainerMargin + 20)
+    .attr("y", legendContainerMargin + 75)
+    .text("");
+
+legendFromContainer.append("text")
+    .attr("id", "node-business-from")
+    .attr("class", "legend-text")
+    .attr("x", legendContainerMargin + 20)
+    .attr("y", legendContainerMargin + 90)
+    .text("");
+
+legendFromContainer.append("text")
+    .attr("id", "node-contagion-from")
+    .attr("class", "legend-text")
+    .attr("x", legendContainerMargin + 80)
+    .attr("y", legendContainerMargin + 130)
+    .text("");
+
+legendFromContainer.append("text")
+    .attr("id", "node-infection-from")
+    .attr("class", "legend-text")
+    .attr("x", legendContainerMargin + 80)
+    .attr("y", legendContainerMargin + 145)
+    .text("");
+
+legendFromContainer.append("image")
+    .attr("id", "node-image-from")
+    .attr("class", "legend-image")
+    .attr("width", "50px")
+    .attr("height", "50px")
+    .attr("x", legendContainerMargin + 20)
+    .attr("y", legendContainerMargin + 110);
+
+legendToContainer.append("text")
+    .attr("id", "node-name-to")
+    .attr("class", "legend-text-header")
+    .attr("x", legendContainerMargin + 20)
+    .attr("y", legendContainerMargin + 50)
+    .text("");
+
+legendToContainer.append("text")
+    .attr("id", "node-location-to")
+    .attr("class", "legend-text")
+    .attr("x", legendContainerMargin + 20)
+    .attr("y", legendContainerMargin + 75)
+    .text("");
+
+legendToContainer.append("text")
+    .attr("id", "node-business-to")
+    .attr("class", "legend-text")
+    .attr("x", legendContainerMargin + 20)
+    .attr("y", legendContainerMargin + 90)
+    .text("");
+
+legendToContainer.append("text")
+    .attr("id", "node-contagion-to")
+    .attr("class", "legend-text")
+    .attr("x", legendContainerMargin + 80)
+    .attr("y", legendContainerMargin + 130)
+    .text("");
+
+legendToContainer.append("text")
+    .attr("id", "node-infection-to")
+    .attr("class", "legend-text")
+    .attr("x", legendContainerMargin + 80)
+    .attr("y", legendContainerMargin + 145)
+    .text("");
+
+legendToContainer.append("image")
+    .attr("id", "node-image-to")
+    .attr("class", "legend-image")
+    .attr("width", "50px")
+    .attr("height", "50px")
+    .attr("x", legendContainerMargin + 20)
+    .attr("y", legendContainerMargin + 110);
+
+
+var nodeFromName = d3.select("#node-name-from").text("").style("opacity", "0.75");
+var nodeFromBusiness = d3.select("#node-business-from").text("").style("opacity", "0.75");
+var nodeFromLocation = d3.select("#node-location-from").text("").style("opacity", "0.75");
+var nodeFromContagion = d3.select("#node-contagion-from").text("").style("opacity", "0.75");
+var nodeFromInfection = d3.select("#node-infection-from").text("").style("opacity", "0.75");
+var nodeFromImage = d3.select("#node-image-from").attr('xlink:href', null);
+
+var nodeToName = d3.select("#node-name-to").text("").style("opacity", "0.75");
+var nodeToBusiness = d3.select("#node-business-to").text("").style("opacity", "0.75");
+var nodeToLocation = d3.select("#node-location-to").text("").style("opacity", "0.75");
+var nodeToContagion = d3.select("#node-contagion-to").text("").style("opacity", "0.75");
+var nodeToInfection = d3.select("#node-infection-to").text("").style("opacity", "0.75");
+var nodeToImage = d3.select("#node-image-to").attr('xlink:href', null);
+
+queue()
+
+    .defer(d3.csv, "data/itsm/nodes.csv")
+    .defer(d3.csv, "data/itsm/edges.csv")
+    .await(function(error, nodeData, edgeData) {
+
+        var maxCausality = d3.max(edgeData.map(function(d){
+            return +d.causality;
+        }));
+
+        console.log("Max causality is " + maxCausality);
+
+        var data = loadData(nodeData, edgeData);
+        var nodes = data.nodes;
+        var edges = data.edges;
+
+        var nodesByType = d3.nest().key(function (d) {
+            return d.member;
+        }).sortKeys(d3.ascending).entries(nodes);
+
+        nodesByType.forEach(function (type) {
+            type.values = type.values.sort(compare)
+        });
+
+        nodesByType.forEach(function (type) {
+            var last = type.values[0].business;
+            var count = 0;
+            type.values.forEach(function (d) {
+                if (d.business != last) {
+                    last = d.business;
+                    count += 2;
+                }
+                d.plotIndex = count++;
+                nodes[d.rawId].plotIndex = d.plotIndex;
+            });
+            type.count = count - 1;
+        });
+
+        nodesByType[0].key = "parent";
+        nodesByType[1].key = "child";
+
+        var hiveEdges = edges.map(function(el){
+            var sourceType = nodes[el.source].member;
+            var targetType = nodes[el.target].member;
+            var linkType;
+            if(nodes[el.source].business == nodes[el.target].business) {
+                linkType = nodes[el.source].business;
+            } else {
+                linkType = "UNK";
+            }
+
+            return {
+                source: {
+                    type: sourceType,
+                    node: nodes[el.source]
+                },
+                target: {
+                    type: targetType,
+                    node: nodes[el.target]
+                },
+                infected: el.causality,
+                linkType: linkType
+            };
+        });
+
+        radius.domain([0, d3.max([nodesByType[0].count, nodesByType[1].count])]);
+
+        // Draw the links
+        svg.append("g")
+            .attr("class", "links")
+            .selectAll(".link")
+            .data(hiveEdges)
+            .enter()
+            .append("path")
+            .attr("class", "link")
+            .attr("d", link()
+                .angle(function (d) {
+                    return angle(d.type);
+                })
+                .radius(function (d) {
+                    return radius(d.node.plotIndex);
+                })
+            )
+            .attr("stroke", function (d) { return getColor(d.linkType); })
+            .on("mouseover", linkMouseover)
+            .on("mouseout", mouseout)
+            .transition()
+            .duration(1000)
+            .delay(100);
+
+        svg.selectAll(".axis")
+            .data(nodesByType)
+            .enter().append("line")
+            .attr("class", "axis")
+            .attr("transform", function (d) {
+                return "rotate(" + degrees(angle(d.key)) + ")";
+            })
+            .attr("x1", radius(-2))
+            .attr("x2", function (d) {
+                return radius(d.count + 10);
+            });
+
+        // Draw the nodes
+        svg.append("g")
+            .attr("class", "nodes")
+            .selectAll(".type")
+            .data(nodesByType)
+            .enter().append("g")
+            .attr("class", function (d) {
+                return d.key + "nodes";
+            })
+            .attr("transform", function (d) {
+                return "rotate(" + degrees(angle(d.key)) + ")";
+            })
+            .selectAll("circle")
+            .data(function (d) {
+                return d.values;
+            })
+            .enter().append("circle")
+            .attr("cx", function (d) {
+                return radius(d.plotIndex);
+            })
+            .attr("r", 4)
+            .attr("fill", function (d) {
+                return getColor(d.business);
+            })
+            .on("mouseover", nodeMouseover)
+            .on("mouseout", mouseout)
+            .transition()
+            .duration(1000)
+            .delay(100);
+
+    });
+
+
+// Highlight the link and connected nodes on mouseover.
+function linkMouseover(d) {
+
+    svg.selectAll(".link").classed("active", function (p) {
+        return p === d;
+    });
+    svg.selectAll("circle").classed("active", function (p) {
+        return p === d.source.node || p === d.target.node;
+    });
+
+    nodeFromName.text(d.source.node.name);
+    nodeFromLocation.text(d.source.node.location);
+    nodeFromBusiness.text("Business : " + d.source.node.business);
+    nodeToName.text(d.target.node.name);
+    nodeToLocation.text(d.target.node.location);
+    nodeToBusiness.text("Business : " + d.target.node.business);
+
+}
+
+function nodeMouseover(d) {
+
+    var neiNodeList = [];
+    svg.selectAll(".link").classed("active", function (p) {
+        if (p.source.node == d) {
+            neiNodeList.push(p.target.node);
+        }
+        if (p.target.node == d) {
+            neiNodeList.push(p.source.node);
+        }
+        return p.source.node === d || p.target.node === d;
+    });
+
+    var infectionSpread = d3.sum(neiNodeList.map(function (e) {
+        if (e.member > d.member) {
+            return 1;
+        } else {
+            return 0;
+        }
+    }));
+
+    var infectionCaused = d3.sum(neiNodeList.map(function (e) {
+        if (e.member < d.member) {
+            return 1;
+        } else {
+            return 0;
+        }
+    }));
+
+    if (d.member == 0) {
+        nodeFromName.text(d.name);
+        nodeFromLocation.text(d.location);
+        nodeFromBusiness.text(d.business);
+        nodeFromContagion.text("Aggressivity : " + d.aggressivity.toFixed(2));
+        nodeFromInfection.text("Possible targets : " + infectionSpread);
+        setImageRisk(nodeFromImage, infectionSpread);
+    } else {
+        nodeToName.text(d.name);
+        nodeToLocation.text(d.location);
+        nodeToBusiness.text(d.business);
+        nodeToContagion.text("Sensitivity : " + d.sensitivity.toFixed(2));
+        nodeToInfection.text("Possible sources : " + infectionCaused);
+        setImageRisk(nodeToImage, infectionCaused);
+
+    }
+
+    d3.select(this).classed("active", true);
+
+}
+
+function setImageRisk(n, r) {
+    if(r <= 2){
+        n.attr("xlink:href", "images/exploit.png");
+    } else if(r > 2 && r <= 5) {
+        n.attr("xlink:href", "images/indicator.png");
+    } else if(r > 5 && r <= 10) {
+        n.attr("xlink:href", "images/incident.png");
+    } else {
+        n.attr("xlink:href", "images/threat.png");
+    }
+}
+
+function mouseout() {
+    svg.selectAll(".active").classed("active", false);
+    nodeToName.text("");
+    nodeToBusiness.text("");
+    nodeToLocation.text("");
+    nodeToContagion.text("");
+    nodeToInfection.text("");
+    nodeToImage.attr('xlink:href', null);
+    nodeFromName.text("");
+    nodeFromBusiness.text("");
+    nodeFromLocation.text("");
+    nodeFromContagion.text("");
+    nodeFromInfection.text("");
+    nodeFromImage.attr('xlink:href', null);
+}
+
+// create sort function that will place females first, then males
+// within those two categories, it will sort in descending order by degree (more connected nodes first)
+function compare(a, b) {
+    if (a.business < b.business)
+        return -1;
+    if (a.business > b.business)
+        return 1;
+    if (a.business == b.business) {
+        if (a.member == 0) {
+            if (a.aggressivity > b.aggressivity)
+                return -1;
+            if (a.aggressivity < b.aggressivity)
+                return 1;
+        } else {
+            if (a.sensitivity > b.sensitivity)
+                return -1;
+            if (a.sensitivity < b.sensitivity)
+                return 1;
+        }
+        return 0;
+    }
+}
+
+var color = d3.scale.ordinal().range(Array.apply(null, new Array(40)).map(function(){
+    var hue = Math.floor(Math.random() * 360);
+    return 'hsl(' + hue + ', 90%, 45.5%)';
+}));
+
+function getColor(g) {
+    if (g == "Business-5") {
+        return color(1);
+    } else if (g == "Business-4") {
+        return color(2);
+    } else if (g == "Business-3") {
+        return color(3);
+    } else if (g == "Business-2") {
+        return color(4);
+    } else if (g == "Business-1") {
+        return color(5);
+    } else if (g == "Business-0") {
+        return color(6);
+    } else {
+        return "darkgrey";
+    }
+}
+
+// function to convert radians into degrees
+function degrees(radians) {
+    return radians / Math.PI * 180 - 90;
+}
+
+
+// A shape generator for Hive links, based on a source and a target.
+// Adapted from http://bost.ocks.org/mike/hive/
+// The source and target are defined in polar coordinates (angle and radius).
+// Ratio links can also be drawn by using a startRadius and endRadius.
+// This class is modeled after d3.svg.chord
+function link() {
+
+    var source = function (d) {
+            return d.source;
+        },
+        target = function (d) {
+            return d.target;
+        },
+        angle = function (d) {
+            return d.angle;
+        },
+        startRadius = function (d) {
+            return d.radius;
+        },
+        endRadius = startRadius,
+        arcOffset = -Math.PI / 2;
+
+    function link(d, i) {
+        var s = node(source, this, d, i),
+            t = node(target, this, d, i),
+            x;
+        if (t.a < s.a) x = t, t = s, s = x;
+        if (t.a - s.a > Math.PI) s.a += 2 * Math.PI;
+        var a1 = s.a + (t.a - s.a) / 3,
+            a2 = t.a - (t.a - s.a) / 3;
+
+        // draw cubic bezier curves for nodes on different axes
+        return s.r0 - s.r1 || t.r0 - t.r1 ? "M" + Math.cos(s.a) * s.r0 + "," + Math.sin(s.a) * s.r0 + "L" + Math.cos(s.a) * s.r1 + "," + Math.sin(s.a) * s.r1 + "C" + Math.cos(a1) * s.r1 + "," + Math.sin(a1) * s.r1 + " " + Math.cos(a2) * t.r1 + "," + Math.sin(a2) * t.r1 + " " + Math.cos(t.a) * t.r1 + "," + Math.sin(t.a) * t.r1 + "L" + Math.cos(t.a) * t.r0 + "," + Math.sin(t.a) * t.r0 + "C" + Math.cos(a2) * t.r0 + "," + Math.sin(a2) * t.r0 + " " + Math.cos(a1) * s.r0 + "," + Math.sin(a1) * s.r0 + " " + Math.cos(s.a) * s.r0 + "," + Math.sin(s.a) * s.r0 : "M" + Math.cos(s.a) * s.r0 + "," + Math.sin(s.a) * s.r0 + "C" + Math.cos(a1) * s.r1 + "," + Math.sin(a1) * s.r1 + " " + Math.cos(a2) * t.r1 + "," + Math.sin(a2) * t.r1 + " " + Math.cos(t.a) * t.r1 + "," + Math.sin(t.a) * t.r1;
+    }
+
+    function node(method, thiz, d, i) {
+        var node = method.call(thiz, d, i),
+            a = +(typeof angle === "function" ? angle.call(thiz, node, i) : angle) + arcOffset,
+            r0 = +(typeof startRadius === "function" ? startRadius.call(thiz, node, i) : startRadius),
+            r1 = (startRadius === endRadius ? r0 : +(typeof endRadius === "function" ? endRadius.call(thiz, node, i) : endRadius));
+        return {
+            r0: r0,
+            r1: r1,
+            a: a
+        };
+    }
+
+    link.source = function (_) {
+        if (!arguments.length) return source;
+        source = _;
+        return link;
+    };
+
+    link.target = function (_) {
+        if (!arguments.length) return target;
+        target = _;
+        return link;
+    };
+
+    link.angle = function (_) {
+        if (!arguments.length) return angle;
+        angle = _;
+        return link;
+    };
+
+    link.radius = function (_) {
+        if (!arguments.length) return startRadius;
+        startRadius = endRadius = _;
+        return link;
+    };
+
+    link.startRadius = function (_) {
+        if (!arguments.length) return startRadius;
+        startRadius = _;
+        return link;
+    };
+
+    link.endRadius = function (_) {
+        if (!arguments.length) return endRadius;
+        endRadius = _;
+        return link;
+    };
+
+    return link;
+}
+
+
+
+function loadData(nodes, edges) {
+
+    var i = 0;
+    var parentsIds = {};
+    var childrenIds = {};
+    var allNodes = [];
+
+    function distinct(value, index, self) {
+        return self.indexOf(value) === index;
+    }
+
+    var uniqueParentIds = edges.map(function(d){return d.source}).filter(distinct);
+    var uniqueChildrenIds = edges.map(function(d){return d.target}).filter(distinct);
+
+    nodes.forEach(function(n){
+        var node = {};
+        node.id = +n.id;
+        node.name = n.name;
+        node.location = n.location;
+        node.business = n.business;
+        node.aggressivity = +n.aggressivity;
+        node.sensitivity = +n.sensitivity;
+        node.rawId = i;
+        node.type = "Parent";
+        node.member = 0;
+        if(uniqueParentIds.indexOf(n.id) > -1){
+            parentsIds[n.id] = i;
+            allNodes.push(node);
+            i++;
+        }
+    });
+
+    nodes.forEach(function(n){
+        var node = {};
+        node.id = +n.id;
+        node.name = n.name;
+        node.location = n.location;
+        node.business = n.business;
+        node.aggressivity = +n.aggressivity;
+        node.sensitivity = +n.sensitivity;
+        node.rawId = i;
+        node.type = "Child";
+        node.member = 1;
+        if(uniqueChildrenIds.indexOf(n.id) > -1){
+            childrenIds[n.id] = i;
+            allNodes.push(node);
+            i++;
+        }
+    });
+
+    var allEdges = edges.map(function(e){
+        var fromId = parentsIds[e.source];
+        var toId = childrenIds[e.target];
+        e.source = fromId;
+        e.target = toId;
+        return e;
+    });
+
+    var data = {};
+    data.nodes = allNodes;
+    data.edges = allEdges;
+    return data;
+}

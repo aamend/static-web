@@ -1,0 +1,52 @@
+
+svg {
+    display: block;
+    color: lightcoral;
+}
+
+.node circle {
+    stroke: #000;
+}
+
+.link {
+    fill: none;
+    stroke-width: 1px;
+    stroke-opacity: .6;
+}
+
+.link.active {
+    stroke: #DC143C;
+    stroke-width: 4px;
+    stroke-opacity: 0.8;
+}
+
+.axis {
+    stroke: black;
+    stroke-width: 2px;
+}
+
+.nodes circle.active {
+    stroke: #DC143C;
+    stroke-width: 3px;
+}
+
+.legend-box {
+    fill: lightgrey;
+    opacity: .8;
+    stroke-width: 3px;
+}
+
+.legend-text {
+    font-family: 'Lato', sans-serif;
+    font-size: 12px;
+    fill: darkblue;
+    text-align: center;
+}
+
+.legend-text-header {
+    font-family: 'Lato', sans-serif;
+    font-size: 16px;
+    fill: darkblue;
+    text-align: center;
+}
+

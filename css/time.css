@@ -1,0 +1,31 @@
+.area {
+    stroke: darkblue;
+    fill: none;
+    stroke-width: 1px;
+    opacity: .9;
+    clip-path: url(#clip);
+}
+
+.point {
+    clip-path: url(#clip);
+}
+
+.trend {
+    stroke: darkgrey;
+    fill: none;
+    stroke-width: 1px;
+    clip-path: url(#clip);
+}
+
+.axis path,
+.axis line {
+    fill: none;
+    stroke: #000;
+    shape-rendering: crispEdges;
+}
+
+.brush .extent {
+    stroke: #fff;
+    fill-opacity: .125;
+    shape-rendering: crispEdges;
+}
